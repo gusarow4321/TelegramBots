@@ -4,13 +4,14 @@ bot = telebot.TeleBot(<token>)
 
 users_arr = dict()
 
+# создание клавиатуры:
 keyb = telebot.types.InlineKeyboardMarkup()
 button_plus = telebot.types.InlineKeyboardButton(text='+', callback_data='1')
 button_minus = telebot.types.InlineKeyboardButton(text='-', callback_data='0')
 keyb.add(button_plus, button_minus)
 
 t = []
-with open('1.txt', 'r') as file:  # выборка вопросов из файла
+with open('1.txt', 'r') as file:  # выборка вопросов из файла и добавление в список
     for row in file.readlines():
         t.append(row.strip())
 
@@ -26,20 +27,20 @@ def start_handler(message):
 
 @bot.message_handler(commands=['continue'])
 def test_handler(message):
-    users_arr[message.from_user.id] = [0, 0, 0, 0]
+    users_arr[message.from_user.id] = [0, 0, 0, 0]  # добавляет пользователя в словарь
     bot.send_message(message.from_user.id, t[0], reply_markup=keyb)  # отправляет пользователю 1 вопрос
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
-    ind = t.index(call.message.text) + 1
-    data = call.data
+    ind = t.index(call.message.text) + 1  # следующий по счету вопрос
+    data = call.data  # 1 или 0 в зависимости от ответа
     type_temp = call.message.text.split('.')[0]
     users_arr[call.from_user.id][int(type_temp) - 1] += int(data)
     try:
         bot.edit_message_text(t[ind], call.from_user.id, message_id=call.message.message_id, reply_markup=keyb)  # изменяет каждый вопрос на следующий по порядку
     except IndexError:
-        # в случае если вопросы кончились:
+        # в случае если вопросы кончились, подсчитывает проценты от каждого типа и выводит сообщение о результатах
         h = round((users_arr[call.from_user.id][0] / sum(users_arr[call.from_user.id])) * 100)
         s = round((users_arr[call.from_user.id][1] / sum(users_arr[call.from_user.id])) * 100)
         f = round((users_arr[call.from_user.id][2] / sum(users_arr[call.from_user.id])) * 100)
