@@ -1,6 +1,6 @@
 import telebot
 
-bot = telebot.TeleBot("600150670:AAEvKgOCOBHBZ9NLzF4XWZft_xF2x6Q9tRU")
+bot = telebot.TeleBot(<token>)
 
 users_arr = dict()
 
@@ -10,7 +10,7 @@ button_minus = telebot.types.InlineKeyboardButton(text='-', callback_data='0')
 keyb.add(button_plus, button_minus)
 
 t = []
-with open('1.txt', 'r') as file:
+with open('1.txt', 'r') as file:  # выборка вопросов из файла
     for row in file.readlines():
         t.append(row.strip())
 
@@ -27,7 +27,7 @@ def start_handler(message):
 @bot.message_handler(commands=['continue'])
 def test_handler(message):
     users_arr[message.from_user.id] = [0, 0, 0, 0]
-    bot.send_message(message.from_user.id, t[0], reply_markup=keyb)
+    bot.send_message(message.from_user.id, t[0], reply_markup=keyb)  # отправляет пользователю 1 вопрос
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -37,8 +37,9 @@ def callback_handler(call):
     type_temp = call.message.text.split('.')[0]
     users_arr[call.from_user.id][int(type_temp) - 1] += int(data)
     try:
-        bot.edit_message_text(t[ind], call.from_user.id, message_id=call.message.message_id, reply_markup=keyb)
+        bot.edit_message_text(t[ind], call.from_user.id, message_id=call.message.message_id, reply_markup=keyb)  # изменяет каждый вопрос на следующий по порядку
     except IndexError:
+        # в случае если вопросы кончились:
         h = round((users_arr[call.from_user.id][0] / sum(users_arr[call.from_user.id])) * 100)
         s = round((users_arr[call.from_user.id][1] / sum(users_arr[call.from_user.id])) * 100)
         f = round((users_arr[call.from_user.id][2] / sum(users_arr[call.from_user.id])) * 100)
