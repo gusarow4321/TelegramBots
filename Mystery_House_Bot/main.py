@@ -4,6 +4,8 @@ import database
 
 bot = telebot.TeleBot(config.token)
 
+users = dict()
+
 
 def create_markup(t):
     m = telebot.types.InlineKeyboardMarkup()
@@ -18,15 +20,15 @@ def send_img(user_id, img_name, markup):
 
 
 def moving(call, updown):
-    user_pr = database.get_progress(call.from_user.id)
-    coord = user_pr.split("_")
+    user_progress = users[call.from_user.id][0]
+    coord = user_progress.split("_")
     if updown:
         update = str(int(coord[0]) + int(call.data.split("_")[0])) + "_" + coord[1]
     else:
         update = coord[0] + "_" + str(int(coord[1]) + int(call.data.split("_")[2]))
-    if user_pr == "1_0_0":
+    if user_progress == "1_0":
         update += "_0"
-    database.update_progress(call.from_user.id, update)
+    users[call.from_user.id][0] = update
     send_img(call.from_user.id, update, create_markup(config.marks[update]))
 
 
@@ -47,42 +49,56 @@ def callback_handler(call):
         bot.edit_message_caption(call.message.caption, call.from_user.id, call.message.message_id)
 
     if call.data == "start game":
-        database.add_player(call.from_user.id, call.from_user.first_name)
-        user_pr = database.get_progress(call.from_user.id)
-        send_img(call.from_user.id, database.get_progress(call.from_user.id), create_markup(config.marks[user_pr]))
+        ind, events = database.add_player(call.from_user.id, call.from_user.first_name)
+        users[call.from_user.id] = [ind, events]
+        send_img(call.from_user.id, ind, create_markup(config.marks[ind]))
+        return
     elif call.data == "about":
         ab_markup = telebot.types.InlineKeyboardMarkup()
         ab_markup.add(telebot.types.InlineKeyboardButton("\U0001F3AE Начать игру", callback_data="start game"))
         bot.send_message(call.from_user.id, config.about, reply_markup=ab_markup)
-    elif call.data == "info":
-        u_p = database.get_progress(call.from_user.id)
-        bot.send_message(call.from_user.id, config.explore[u_p], reply_markup=create_markup(config.marks[u_p][1:]))
-    elif "add" in call.data:
-        database.add_to_inv(call.from_user.id, call.data.split(" ")[1])
-        coord = call.data.split(" ")[2]
-        send_img(call.from_user.id, coord, create_markup(config.marks[coord]))
-    elif "_" in call.data:
-        if call.data[0] != "_":
-            moving(call, True)
+        return
+
+    try:
+        u_prog = users[call.from_user.id][0]
+        u_id = call.from_user.id
+
+        if "info" in call.data:
+            bot.send_message(u_id, config.explore[u_prog], reply_markup=create_markup(config.marks[u_prog][1:]))
+        elif "add" in call.data:
+            data_arr = call.data.split(" ")
+            users[u_id][1] += data_arr[1] + "_"
+            database.update_user(u_id, u_prog, users[u_id][1])
+            send_img(call.from_user.id, data_arr[2], create_markup(config.marks[data_arr[2]]))
+        elif "_" in call.data:
+            if call.data[0] != "_":
+                moving(call, True)
+            else:
+                moving(call, False)
+        elif call.data == "door":
+            if u_prog == "1_0":
+                send_img(u_id, "1_0_0", create_markup(config.marks["1_0_0"]))
+            elif u_prog == "2_-2":
+                bot.send_message(u_id, config.no_exit, reply_markup=create_markup(config.marks[u_prog][1:]))
+        elif call.data == "read note":
+            if u_prog == "2_0_0":
+                database.update_user(u_id, "2_0_0", users[u_id][1])
+                users[u_id][0] = "2_0_1"
+                send_img(u_id, "note_1", create_markup(config.marks["note"]))
+        elif call.data == "drop note" or call.data == "return":
+            send_img(u_id, u_prog, create_markup(config.marks[u_prog]))
         else:
-            moving(call, False)
-    elif call.data == "door":
-        user_pr = database.get_progress(call.from_user.id)
-        if user_pr == "1_0":
-            database.update_progress(call.from_user.id, "1_0_0")
-            send_img(call.from_user.id, "1_0_0", create_markup(config.marks["1_0_0"]))
-        elif user_pr == "2_-2":
-            bot.send_message(call.from_user.id, config.no_exit, reply_markup=create_markup(config.marks[user_pr][1:]))
-    elif call.data == "read note":
-        user_pr = database.get_progress(call.from_user.id)
-        if user_pr == "2_0_0":
-            database.update_progress(call.from_user.id, "2_0_1")
-            send_img(call.from_user.id, "note_1", create_markup(config.marks["note"]))
-    elif call.data == "drop note":
-        user_pr = database.get_progress(call.from_user.id)
-        send_img(call.from_user.id, database.get_progress(call.from_user.id), create_markup(config.marks[user_pr]))
-    else:
-        send_img(call.from_user.id, call.data, create_markup(config.marks[call.data]))
+            events_arr = users[u_id][1].split("_")
+            if call.data not in events_arr:
+                send_img(u_id, call.data, create_markup(config.marks[call.data]))
+            else:
+                not_event = "not_" + call.data
+                send_img(u_id, not_event, create_markup(config.marks[not_event]))
+    except KeyError:
+        ind, events = database.add_player(call.from_user.id, call.from_user.first_name)
+        users[call.from_user.id] = [ind, events]
+        bot.send_message(call.from_user.id, config.error_mes)
+        send_img(call.from_user.id, ind, create_markup(config.marks[ind]))
 
 
 if __name__ == "__main__":

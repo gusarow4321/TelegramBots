@@ -3,49 +3,25 @@ import sqlite3
 
 def add_player(user_id, name):
     progress = "0_0"
-    inv = "test"
     db = sqlite3.connect("players.db")
     cur = db.cursor()
-    if not cur.execute(f"SELECT * FROM players WHERE user_id={user_id}").fetchall():
+    check_prog = cur.execute(f"SELECT progress, events FROM players WHERE user_id={user_id}").fetchall()
+    if not check_prog:
         with db:
-            cur.execute(f"INSERT INTO players (user_id, name, progress, invent) VALUES ({user_id}, '{name}', "
+            cur.execute(f"INSERT INTO players (user_id, name, progress, events) VALUES ({user_id}, '{name}', "
                         f"'{progress}', '')")
-    db.close()
+        db.close()
+        return "0_0", ''
+    else:
+        db.close()
+        return check_prog[0][0], check_prog[0][1]
 
 
-def get_progress(user_id):
+def update_user(user_id, p, event):
     db = sqlite3.connect("players.db")
     cur = db.cursor()
     with db:
-        img_name = cur.execute(f"SELECT progress FROM players WHERE user_id={user_id}").fetchall()
-    db.close()
-    return str(img_name[0][0])
-
-
-def update_progress(user_id, p):
-    db = sqlite3.connect("players.db")
-    cur = db.cursor()
-    with db:
-        cur.execute(f"UPDATE players SET progress='{p}' WHERE user_id={user_id}").fetchall()
-    db.close()
-
-
-def get_inv(user_id):
-    db = sqlite3.connect("players.db")
-    cur = db.cursor()
-    with db:
-        tool = cur.execute(f"SELECT invent FROM players WHERE user_id={user_id}").fetchall()
-    db.close()
-    return str(tool[0][0])
-
-
-def add_to_inv(user_id, tool):
-    inv = get_inv(user_id)
-    db = sqlite3.connect("players.db")
-    cur = db.cursor()
-    inv += tool + "_"
-    with db:
-        cur.execute(f"UPDATE players SET invent='{inv}' WHERE user_id={user_id}").fetchall()
+        cur.execute(f"UPDATE players SET progress='{p}', events='{event}' WHERE user_id={user_id}").fetchall()
     db.close()
 
 
