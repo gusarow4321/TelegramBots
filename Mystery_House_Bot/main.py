@@ -27,7 +27,7 @@ def moving(call, updown):
         update = str(int(coord[0]) + int(call.data.split("_")[0])) + "_" + coord[1]
     else:
         update = coord[0] + "_" + str(int(coord[1]) + int(call.data.split("_")[2]))
-    if user_progress in config.exceptions:
+    if user_progress == "1_0":
         update += "_0"
     users[call.from_user.id][0] = update
     send_img(call.from_user.id, update, create_markup(config.marks[update]))
