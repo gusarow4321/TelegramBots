@@ -21,12 +21,13 @@ def send_img(user_id, img_name, markup):
 
 def moving(call, updown):
     user_progress = users[call.from_user.id][0]
+    user_events = users[call.from_user.id][1].split("_")
     coord = user_progress.split("_")
     if updown:
         update = str(int(coord[0]) + int(call.data.split("_")[0])) + "_" + coord[1]
     else:
         update = coord[0] + "_" + str(int(coord[1]) + int(call.data.split("_")[2]))
-    if user_progress == "1_0":
+    if user_progress in config.exceptions:
         update += "_0"
     users[call.from_user.id][0] = update
     send_img(call.from_user.id, update, create_markup(config.marks[update]))
@@ -68,7 +69,7 @@ def callback_handler(call):
         elif "add" in call.data:
             data_arr = call.data.split(" ")
             users[u_id][1] += data_arr[1] + "_"
-            database.update_user(u_id, u_prog, users[u_id][1])
+            database.update_user(u_id, data_arr[2], users[u_id][1])
             send_img(call.from_user.id, data_arr[2], create_markup(config.marks[data_arr[2]]))
         elif "_" in call.data:
             if call.data[0] != "_":
@@ -85,7 +86,7 @@ def callback_handler(call):
                 database.update_user(u_id, "2_0_0", users[u_id][1])
                 users[u_id][0] = "2_0_1"
                 send_img(u_id, "note_1", create_markup(config.marks["note"]))
-        elif call.data == "drop note" or call.data == "return":
+        elif call.data == "continue":
             send_img(u_id, u_prog, create_markup(config.marks[u_prog]))
         else:
             events_arr = users[u_id][1].split("_")
@@ -97,9 +98,9 @@ def callback_handler(call):
     except KeyError:
         ind, events = database.add_player(call.from_user.id, call.from_user.first_name)
         users[call.from_user.id] = [ind, events]
-        bot.send_message(call.from_user.id, config.error_mes)
-        send_img(call.from_user.id, ind, create_markup(config.marks[ind]))
+        bot.send_message(call.from_user.id, config.error_mes, reply_markup=create_markup(config.marks["ok cont"]))
 
 
 if __name__ == "__main__":
     bot.polling(none_stop=True)
+
